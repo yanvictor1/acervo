@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/db'
-import { saveFile } from '@/lib/upload'
+import { saveFile, getFileUrl } from '@/lib/upload'
 import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -31,8 +31,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  const documents = (docs || []).map((d: any) => ({ ...d, file_url: getFileUrl(d.stored_name), tags: JSON.parse(d.tags || '[]') }))
+
   return NextResponse.json({
-    documents: docs || [],
+    documents,
     pagination: {
       page,
       limit,
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const result = saveFile(buffer, file.name, file.type)
+    const result = await saveFile(buffer, file.name, file.type)
 
     const supabase = getSupabase()
     const { data, error } = await supabase.from('documents').insert({
@@ -76,7 +78,10 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data![0], { status: 201 })
+    const newDoc = data![0]
+    newDoc.file_url = getFileUrl(newDoc.stored_name)
+    newDoc.tags = JSON.parse(newDoc.tags || '[]')
+    return NextResponse.json(newDoc, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }

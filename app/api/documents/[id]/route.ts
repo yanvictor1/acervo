@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/db'
-import { deleteFile } from '@/lib/upload'
+import { deleteFile, getFileUrl } from '@/lib/upload'
 import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
   }
 
-  return NextResponse.json({ ...doc, tags: JSON.parse(doc.tags || '[]') })
+  return NextResponse.json({ ...doc, file_url: getFileUrl(doc.stored_name), tags: JSON.parse(doc.tags || '[]') })
 }
 
 export async function PATCH(
@@ -51,7 +51,7 @@ export async function PATCH(
     const updated: any = updRes.data?.[0]
     if (!updated) throw new Error('Update failed')
 
-    return NextResponse.json({ ...updated, tags: JSON.parse(updated.tags || '[]') })
+    return NextResponse.json({ ...updated, file_url: getFileUrl(updated.stored_name), tags: JSON.parse(updated.tags || '[]') })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
@@ -72,7 +72,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
   }
 
-  deleteFile(doc.stored_name)
+  await deleteFile(doc.stored_name)
   await supabase.from('documents').delete().eq('id', params.id)
 
   return NextResponse.json({ success: true })

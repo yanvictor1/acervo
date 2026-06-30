@@ -263,7 +263,7 @@ export default function DashboardPage() {
               {documents.map((doc) => (
                 <DocumentCard
                   key={doc.id}
-                  doc={{ ...doc, tags: JSON.parse(doc.tags || '[]') }}
+                  doc={{ ...doc, tags: typeof doc.tags === 'string' ? JSON.parse(doc.tags || '[]') : doc.tags }}
                   isFavorite={favorites.includes(doc.id)}
                   isSelected={false}
                   onToggleFavorite={toggleFavorite}

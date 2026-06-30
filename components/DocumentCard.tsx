@@ -9,6 +9,7 @@ interface DocumentCardProps {
     description?: string
     filename: string
     stored_name: string
+    file_url?: string
     mime_type: string
     size_bytes: number
     tags: string[]
@@ -34,7 +35,7 @@ export default function DocumentCard({
                doc.mime_type.startsWith('image/') ? Image : File
 
   const previewUrl = doc.mime_type.startsWith('image/')
-    ? `/uploads/${doc.stored_name}`
+    ? doc.file_url || `/uploads/${doc.stored_name}`
     : null
 
   return (

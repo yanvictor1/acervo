@@ -270,7 +270,7 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-2">
             {documents.map((doc) => {
-              const tags = JSON.parse(doc.tags || '[]')
+              const tags = typeof doc.tags === 'string' ? JSON.parse(doc.tags || '[]') : doc.tags
               return (
                 <div key={doc.id}
                   className={`card-hover p-3 flex items-center gap-3 cursor-pointer ${selected.includes(doc.id) ? 'ring-2 ring-paper-500/50 border-paper-600/50' : ''}`}

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       for (const id of ids) {
         const delRes = await supabase.from('documents').select('stored_name').eq('id', id).maybeSingle()
         const doc: any = delRes.data
-        if (doc) deleteFile(doc.stored_name)
+        if (doc) await deleteFile(doc.stored_name)
       }
       await supabase.from('documents').delete().in('id', ids)
       return NextResponse.json({ success: true, deleted: ids.length })
