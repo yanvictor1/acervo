@@ -5,7 +5,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_
 
 let client: ReturnType<typeof createClient> | null = null
 
-export function getSupabase() {
+export function getSupabase(): any {
   if (!client) {
     client = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false },

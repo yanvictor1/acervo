@@ -9,11 +9,10 @@ export async function POST() {
   if (auth?.error) return auth.error
 
   const supabase = getSupabase()
-  const { data } = await supabase.from('documents').select('id, title, description, tags')
+  const { data } = await supabase.from('documents').select('id')
 
   for (const doc of data || []) {
-    // Trigger auto-updates search_vector on update, so we trigger a no-op update
-    await supabase.from('documents').update({ title: doc.title }).eq('id', doc.id)
+    await supabase.from('documents').update({ updated_at: new Date().toISOString() }).eq('id', doc.id)
   }
 
   return NextResponse.json({ success: true })
