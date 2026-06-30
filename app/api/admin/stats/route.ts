@@ -7,18 +7,21 @@ export async function GET() {
   const supabase = getSupabase()
 
   const { count: total } = await supabase.from('documents').select('*', { count: 'exact', head: true })
-  const { data: sizeData } = await supabase.from('documents').select('size_bytes')
-  const total_size = sizeData?.reduce((s, d) => s + (d.size_bytes || 0), 0) || 0
+  const sizeRes = await supabase.from('documents').select('size_bytes')
+  const sizeData: any[] = sizeRes.data || []
+  const total_size = sizeData.reduce((s: number, d: any) => s + (d.size_bytes || 0), 0)
 
-  const { data: viewData } = await supabase.from('documents').select('views')
-  const total_views = viewData?.reduce((s, d) => s + (d.views || 0), 0) || 0
+  const viewRes = await supabase.from('documents').select('views')
+  const viewData: any[] = viewRes.data || []
+  const total_views = viewData.reduce((s: number, d: any) => s + (d.views || 0), 0)
 
   const { count: favorites } = await supabase.from('documents').select('*', { count: 'exact', head: true }).eq('is_favorite_admin', 1)
   const { count: feedback_count } = await supabase.from('feedback').select('*', { count: 'exact', head: true })
 
-  const { data: docs } = await supabase.from('documents').select('mime_type, size_bytes')
+  const docsRes = await supabase.from('documents').select('mime_type, size_bytes')
+  const docs: any[] = docsRes.data || []
   const byTypeMap: Record<string, { count: number; total_size: number }> = {}
-  for (const doc of docs || []) {
+  for (const doc of docs) {
     let type = 'other'
     if (doc.mime_type === 'application/pdf') type = 'pdf'
     else if (doc.mime_type.startsWith('image/')) type = 'image'
@@ -33,9 +36,10 @@ export async function GET() {
     .map(([type, data]) => ({ type, count: data.count, total_size: data.total_size }))
     .sort((a, b) => b.count - a.count)
 
-  const { data: tagData } = await supabase.from('documents').select('tags')
+  const tagDataRes = await supabase.from('documents').select('tags')
+  const tagData: any[] = tagDataRes.data || []
   const tagCountMap: Record<string, number> = {}
-  for (const doc of tagData || []) {
+  for (const doc of tagData) {
     try {
       const tags = JSON.parse(doc.tags || '[]')
       for (const tag of tags) tagCountMap[tag] = (tagCountMap[tag] || 0) + 1
