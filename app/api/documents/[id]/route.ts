@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { query, queryOne, execute } from '@/lib/db'
 import { deleteFile } from '@/lib/upload'
 import { requireAuth } from '@/lib/auth'
 
@@ -7,8 +7,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const db = getDb()
-  const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(params.id) as any
+  const doc = await queryOne('SELECT * FROM documents WHERE id = $1', [params.id]) as any
 
   if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
@@ -22,47 +21,50 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = requireAuth()
+  const auth = await requireAuth()
   if (auth?.error) return auth.error
   try {
-    const db = getDb()
-    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(params.id) as any
+    const doc = await queryOne('SELECT * FROM documents WHERE id = $1', [params.id]) as any
 
     if (!doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
     const body = await request.json()
-    const updates: string[] = []
+    const sets: string[] = []
     const values: any[] = []
+    let paramIndex = 1
 
     if (body.title !== undefined) {
-      updates.push('title = ?')
+      sets.push(`title = $${paramIndex++}`)
       values.push(body.title)
     }
     if (body.description !== undefined) {
-      updates.push('description = ?')
+      sets.push(`description = $${paramIndex++}`)
       values.push(body.description)
     }
     if (body.tags !== undefined) {
-      updates.push('tags = ?')
+      sets.push(`tags = $${paramIndex++}`)
       values.push(JSON.stringify(body.tags))
     }
     if (body.is_favorite_admin !== undefined) {
-      updates.push('is_favorite_admin = ?')
+      sets.push(`is_favorite_admin = $${paramIndex++}`)
       values.push(body.is_favorite_admin ? 1 : 0)
     }
 
-    if (updates.length === 0) {
+    if (sets.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
-    updates.push("updated_at = datetime('now')")
+    sets.push(`updated_at = NOW()`)
     values.push(params.id)
 
-    db.prepare(`UPDATE documents SET ${updates.join(', ')} WHERE id = ?`).run(...values)
+    await execute(
+      `UPDATE documents SET ${sets.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
 
-    const updated = db.prepare('SELECT * FROM documents WHERE id = ?').get(params.id) as any
+    const updated = await queryOne('SELECT * FROM documents WHERE id = $1', [params.id]) as any
     return NextResponse.json({ ...updated, tags: JSON.parse(updated.tags || '[]') })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
@@ -73,17 +75,16 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = requireAuth()
+  const auth = await requireAuth()
   if (auth?.error) return auth.error
-  const db = getDb()
-  const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(params.id) as any
+  const doc = await queryOne('SELECT * FROM documents WHERE id = $1', [params.id]) as any
 
   if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
   }
 
   deleteFile(doc.stored_name)
-  db.prepare('DELETE FROM documents WHERE id = ?').run(params.id)
+  await execute('DELETE FROM documents WHERE id = $1', [params.id])
 
   return NextResponse.json({ success: true })
 }

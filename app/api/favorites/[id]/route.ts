@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { queryOne, execute } from '@/lib/db'
 import { getUserId, requireAuth } from '@/lib/auth'
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = requireAuth()
+  const auth = await requireAuth()
   if (auth?.error) return auth.error
 
-  const db = getDb()
   const userId = getUserId()
   const docId = parseInt(params.id)
 
@@ -17,15 +16,16 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 })
   }
 
-  const existing = db.prepare(
-    'SELECT * FROM user_favorites WHERE user_id = ? AND document_id = ?'
-  ).get(userId, docId)
+  const existing = await queryOne(
+    'SELECT * FROM user_favorites WHERE user_id = $1 AND document_id = $2',
+    [userId, docId]
+  )
 
   if (existing) {
-    db.prepare('DELETE FROM user_favorites WHERE user_id = ? AND document_id = ?').run(userId, docId)
+    await execute('DELETE FROM user_favorites WHERE user_id = $1 AND document_id = $2', [userId, docId])
     return NextResponse.json({ favorited: false })
   } else {
-    db.prepare('INSERT INTO user_favorites (user_id, document_id) VALUES (?, ?)').run(userId, docId)
+    await execute('INSERT INTO user_favorites (user_id, document_id) VALUES ($1, $2)', [userId, docId])
     return NextResponse.json({ favorited: true })
   }
 }

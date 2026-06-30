@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/db'
 
 export async function GET() {
-  const db = getDb()
-  const rows = db.prepare(`
-    SELECT DISTINCT json_each.value as tag
-    FROM documents, json_each(documents.tags)
+  const rows = await query(`
+    SELECT DISTINCT value::text as tag
+    FROM documents, jsonb_array_elements_text(
+      CASE WHEN tags != '[]' THEN tags::jsonb ELSE '[]'::jsonb END
+    ) as value
     ORDER BY tag ASC
-  `).all() as { tag: string }[]
+  `) as { tag: string }[]
 
   return NextResponse.json(rows.map((r) => r.tag))
 }

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
     }
 
-    const token = createSession()
+    const token = await createSession()
     const response = NextResponse.json({ success: true })
     setSessionCookie(token)
     return response

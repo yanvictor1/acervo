@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { execute } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
 export async function POST() {
-  const auth = requireAuth()
+  const auth = await requireAuth()
   if (auth?.error) return auth.error
-  const db = getDb()
-  db.exec(`
-    INSERT INTO documents_fts(documents_fts) VALUES('rebuild');
-    INSERT INTO documents_fts(documents_fts) VALUES('optimize');
+  await execute(`
+    UPDATE documents SET search_vector = to_tsvector('portuguese', COALESCE(title, '') || ' ' || COALESCE(description, '') || ' ' || COALESCE(tags, ''))
   `)
   return NextResponse.json({ success: true })
 }
