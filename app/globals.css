@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    @apply text-ink-100 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'salt';
+  }
+
+  ::selection {
+    @apply bg-paper-500/25 text-paper-200;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full hover:bg-ink-500;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-ink-900/70 border border-ink-700/40 rounded-2xl
+           backdrop-blur-sm transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply card
+           hover:border-paper-600/30 hover:bg-ink-800/70
+           hover:shadow-[0_0_30px_-12px_rgba(191,161,99,0.15)]
+           hover:-translate-y-0.5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           font-medium text-sm transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-paper-500/30 focus:ring-offset-2 focus:ring-offset-ink-950
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-b from-paper-600 to-paper-700
+           text-ink-950 font-semibold
+           hover:from-paper-500 hover:to-paper-600
+           active:from-paper-700 active:to-paper-800
+           shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_0_20px_-8px_rgba(191,161,99,0.3)];
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-400 hover:text-ink-100 hover:bg-ink-800/80;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-900/40 text-red-300 border border-red-800/30
+           hover:bg-red-800/50 hover:border-red-700/40;
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl
+           bg-ink-900/80 border border-ink-700/50 text-ink-100
+           placeholder:text-ink-500/70
+           focus:outline-none focus:ring-2 focus:ring-paper-500/20 focus:border-paper-600/40
+           transition-all duration-200 text-sm;
+  }
+
+  .input-search {
+    @apply input pl-10
+           bg-ink-900/50 border-ink-700/30
+           focus:bg-ink-900/80;
+  }
+
+  .tag-pill {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+           text-[11px] font-medium tracking-wide uppercase
+           bg-ink-800/60 text-ink-400 border border-ink-700/30
+           transition-all duration-200 cursor-pointer
+           hover:bg-ink-700/60 hover:text-ink-200 hover:border-ink-600/40;
+  }
+
+  .tag-pill-active {
+    @apply tag-pill bg-paper-600/15 text-paper-400 border-paper-600/25
+           hover:bg-paper-600/25 hover:text-paper-300;
+  }
+
+  .preview-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center
+           bg-ink-950/85 backdrop-blur-md p-4;
+  }
+
+  .logo-icon {
+    @apply w-9 h-9 rounded-xl bg-gradient-to-br from-paper-500 to-paper-700
+           flex items-center justify-center shadow-lg shadow-paper-600/20;
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(191, 161, 99, 0.06) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.stagger > * {
+  animation: slide-up 0.4s ease-out both;
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger > *:nth-child(6) { animation-delay: 0.18s; }
+.stagger > *:nth-child(7) { animation-delay: 0.21s; }
+.stagger > *:nth-child(8) { animation-delay: 0.24s; }
+.stagger > *:nth-child(9) { animation-delay: 0.27s; }
+.stagger > *:nth-child(10) { animation-delay: 0.30s; }

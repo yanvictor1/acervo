@@ -1,0 +1,14 @@
+node_modules/
+.next/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+.env.local
+public/uploads/*
+!public/uploads/.gitkeep
+server.log
+server.err
+1780844157131-frontend-slides/
+1780844214024-prompt-master/
+1780947367504-frontend-design/
+visual-explainer/
