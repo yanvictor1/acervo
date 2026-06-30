@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
 import { getUserId } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
+  const supabase = getSupabase()
   const userId = getUserId()
 
-  const rows = await query(
-    'SELECT document_id FROM user_favorites WHERE user_id = $1',
-    [userId]
-  ) as { document_id: number }[]
+  const { data } = await supabase
+    .from('user_favorites')
+    .select('document_id')
+    .eq('user_id', userId)
 
-  return NextResponse.json(rows.map((r) => r.document_id))
+  return NextResponse.json((data || []).map((r) => r.document_id))
 }

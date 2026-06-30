@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server'
-import { execute } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST() {
   const auth = await requireAuth()
   if (auth?.error) return auth.error
-  await execute(`
-    UPDATE documents SET search_vector = to_tsvector('portuguese', COALESCE(title, '') || ' ' || COALESCE(description, '') || ' ' || COALESCE(tags, ''))
-  `)
+
+  const supabase = getSupabase()
+  const { data } = await supabase.from('documents').select('id, title, description, tags')
+
+  for (const doc of data || []) {
+    // Trigger auto-updates search_vector on update, so we trigger a no-op update
+    await supabase.from('documents').update({ title: doc.title }).eq('id', doc.id)
+  }
+
   return NextResponse.json({ success: true })
 }

@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const rows = await query(`
-    SELECT DISTINCT value::text as tag
-    FROM documents, jsonb_array_elements_text(
-      CASE WHEN tags != '[]' THEN tags::jsonb ELSE '[]'::jsonb END
-    ) as value
-    ORDER BY tag ASC
-  `) as { tag: string }[]
+  const supabase = getSupabase()
+  const { data } = await supabase.from('documents').select('tags')
 
-  return NextResponse.json(rows.map((r) => r.tag))
+  const tagSet = new Set<string>()
+  for (const doc of data || []) {
+    try {
+      const tags = JSON.parse(doc.tags || '[]')
+      for (const tag of tags) tagSet.add(tag)
+    } catch {}
+  }
+
+  return NextResponse.json([...tagSet].sort())
 }

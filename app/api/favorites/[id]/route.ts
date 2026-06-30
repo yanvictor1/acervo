@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { queryOne, execute } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
 import { getUserId, requireAuth } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   _request: NextRequest,
@@ -9,6 +11,7 @@ export async function POST(
   const auth = await requireAuth()
   if (auth?.error) return auth.error
 
+  const supabase = getSupabase()
   const userId = getUserId()
   const docId = parseInt(params.id)
 
@@ -16,16 +19,24 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 })
   }
 
-  const existing = await queryOne(
-    'SELECT * FROM user_favorites WHERE user_id = $1 AND document_id = $2',
-    [userId, docId]
-  )
+  const { data: existing } = await supabase
+    .from('user_favorites')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('document_id', docId)
+    .maybeSingle()
 
   if (existing) {
-    await execute('DELETE FROM user_favorites WHERE user_id = $1 AND document_id = $2', [userId, docId])
+    await supabase
+      .from('user_favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('document_id', docId)
     return NextResponse.json({ favorited: false })
   } else {
-    await execute('INSERT INTO user_favorites (user_id, document_id) VALUES ($1, $2)', [userId, docId])
+    await supabase
+      .from('user_favorites')
+      .insert({ user_id: userId, document_id: docId })
     return NextResponse.json({ favorited: true })
   }
 }

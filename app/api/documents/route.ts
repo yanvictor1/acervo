@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
 import { saveFile } from '@/lib/upload'
 import { requireAuth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
+  const supabase = getSupabase()
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('query') || ''
   const tag = searchParams.get('tag') || ''
@@ -11,43 +14,30 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')))
   const offset = (page - 1) * limit
 
-  let sql: string
-  let countSql: string
-  let sqlParams: any[]
-  let countParams: any[]
+  let queryBuilder = supabase.from('documents').select('*', { count: 'exact' })
 
-  if (search && tag) {
-    sql = `SELECT d.* FROM documents d WHERE d.search_vector @@ plainto_tsquery('portuguese', $1) AND d.tags LIKE $2 ORDER BY d.created_at DESC LIMIT $3 OFFSET $4`
-    countSql = `SELECT COUNT(*) as total FROM documents d WHERE d.search_vector @@ plainto_tsquery('portuguese', $1) AND d.tags LIKE $2`
-    sqlParams = [search, `%"${tag}"%`, limit, offset]
-    countParams = [search, `%"${tag}"%`]
-  } else if (search) {
-    sql = `SELECT d.* FROM documents d WHERE d.search_vector @@ plainto_tsquery('portuguese', $1) ORDER BY d.created_at DESC LIMIT $2 OFFSET $3`
-    countSql = `SELECT COUNT(*) as total FROM documents d WHERE d.search_vector @@ plainto_tsquery('portuguese', $1)`
-    sqlParams = [search, limit, offset]
-    countParams = [search]
-  } else if (tag) {
-    sql = `SELECT * FROM documents WHERE tags LIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
-    countSql = `SELECT COUNT(*) as total FROM documents WHERE tags LIKE $1`
-    sqlParams = [`%"${tag}"%`, limit, offset]
-    countParams = [`%"${tag}"%`]
-  } else {
-    sql = `SELECT * FROM documents ORDER BY created_at DESC LIMIT $1 OFFSET $2`
-    countSql = `SELECT COUNT(*) as total FROM documents`
-    sqlParams = [limit, offset]
-    countParams = []
+  if (search) {
+    queryBuilder = queryBuilder.textSearch('search_vector', search, { type: 'plain' })
+  }
+  if (tag) {
+    queryBuilder = queryBuilder.ilike('tags', `%"${tag}"%`)
   }
 
-  const docs = await query(sql, sqlParams)
-  const totalRow = await queryOne(countSql, countParams) as { total: number } | undefined
+  const { data: docs, error, count } = await queryBuilder
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({
-    documents: docs,
+    documents: docs || [],
     pagination: {
       page,
       limit,
-      total: totalRow?.total || 0,
-      totalPages: Math.ceil((totalRow?.total || 0) / limit),
+      total: count || 0,
+      totalPages: Math.ceil((count || 0) / limit),
     },
   })
 }
@@ -55,6 +45,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth()
   if (auth?.error) return auth.error
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -72,21 +63,20 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const result = saveFile(buffer, file.name, file.type)
 
-    const rows = await query(
-      `INSERT INTO documents (title, description, filename, stored_name, mime_type, size_bytes, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [
-        title || file.name.replace(/\.[^/.]+$/, ''),
-        description,
-        result.originalName,
-        result.storedName,
-        result.mimeType,
-        result.sizeBytes,
-        JSON.stringify(tags),
-      ]
-    )
+    const supabase = getSupabase()
+    const { data, error } = await supabase.from('documents').insert({
+      title: title || file.name.replace(/\.[^/.]+$/, ''),
+      description,
+      filename: result.originalName,
+      stored_name: result.storedName,
+      mime_type: result.mimeType,
+      size_bytes: result.sizeBytes,
+      tags: JSON.stringify(tags),
+    }).select()
 
-    return NextResponse.json(rows[0], { status: 201 })
+    if (error) throw error
+
+    return NextResponse.json(data![0], { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }

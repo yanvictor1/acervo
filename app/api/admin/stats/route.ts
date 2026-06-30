@@ -1,45 +1,56 @@
 import { NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { getSupabase } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const total = (await queryOne('SELECT COUNT(*)::int as total FROM documents')) as { total: number }
-  const total_size = (await queryOne("SELECT COALESCE(SUM(size_bytes), 0)::int as total_size FROM documents")) as { total_size: number }
-  const total_views = (await queryOne("SELECT COALESCE(SUM(views), 0)::int as total_views FROM documents")) as { total_views: number }
-  const favorites = (await queryOne("SELECT COUNT(*)::int as favorites FROM documents WHERE is_favorite_admin = 1")) as { favorites: number }
-  const feedback_count = (await queryOne("SELECT COUNT(*)::int as feedback_count FROM feedback")) as { feedback_count: number }
+  const supabase = getSupabase()
 
-  const byType = await query(`
-    SELECT
-      CASE
-        WHEN mime_type = 'application/pdf' THEN 'pdf'
-        WHEN mime_type LIKE 'image/%' THEN 'image'
-        WHEN mime_type LIKE 'video/%' THEN 'video'
-        WHEN mime_type LIKE 'audio/%' THEN 'audio'
-        WHEN mime_type IN ('text/markdown', 'text/plain') THEN 'text'
-        ELSE 'other'
-      END as type,
-      COUNT(*)::int as count,
-      COALESCE(SUM(size_bytes), 0)::int as total_size
-    FROM documents
-    GROUP BY type
-    ORDER BY count DESC
-  `)
+  const { count: total } = await supabase.from('documents').select('*', { count: 'exact', head: true })
+  const { data: sizeData } = await supabase.from('documents').select('size_bytes')
+  const total_size = sizeData?.reduce((s, d) => s + (d.size_bytes || 0), 0) || 0
 
-  const tagCounts = await query(`
-    SELECT value::text as tag, COUNT(*)::int as count
-    FROM documents, jsonb_array_elements_text(
-      CASE WHEN tags != '[]' THEN tags::jsonb ELSE '[]'::jsonb END
-    ) as value
-    GROUP BY value
-    ORDER BY count DESC
-  `)
+  const { data: viewData } = await supabase.from('documents').select('views')
+  const total_views = viewData?.reduce((s, d) => s + (d.views || 0), 0) || 0
+
+  const { count: favorites } = await supabase.from('documents').select('*', { count: 'exact', head: true }).eq('is_favorite_admin', 1)
+  const { count: feedback_count } = await supabase.from('feedback').select('*', { count: 'exact', head: true })
+
+  const { data: docs } = await supabase.from('documents').select('mime_type, size_bytes')
+  const byTypeMap: Record<string, { count: number; total_size: number }> = {}
+  for (const doc of docs || []) {
+    let type = 'other'
+    if (doc.mime_type === 'application/pdf') type = 'pdf'
+    else if (doc.mime_type.startsWith('image/')) type = 'image'
+    else if (doc.mime_type.startsWith('video/')) type = 'video'
+    else if (doc.mime_type.startsWith('audio/')) type = 'audio'
+    else if (['text/markdown', 'text/plain'].includes(doc.mime_type)) type = 'text'
+    if (!byTypeMap[type]) byTypeMap[type] = { count: 0, total_size: 0 }
+    byTypeMap[type].count++
+    byTypeMap[type].total_size += doc.size_bytes || 0
+  }
+  const byType = Object.entries(byTypeMap)
+    .map(([type, data]) => ({ type, count: data.count, total_size: data.total_size }))
+    .sort((a, b) => b.count - a.count)
+
+  const { data: tagData } = await supabase.from('documents').select('tags')
+  const tagCountMap: Record<string, number> = {}
+  for (const doc of tagData || []) {
+    try {
+      const tags = JSON.parse(doc.tags || '[]')
+      for (const tag of tags) tagCountMap[tag] = (tagCountMap[tag] || 0) + 1
+    } catch {}
+  }
+  const tagCounts = Object.entries(tagCountMap)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count)
 
   return NextResponse.json({
-    total: total?.total || 0,
-    total_size: total_size?.total_size || 0,
-    total_views: total_views?.total_views || 0,
-    favorites: favorites?.favorites || 0,
-    feedback_count: feedback_count?.feedback_count || 0,
+    total: total || 0,
+    total_size,
+    total_views,
+    favorites: favorites || 0,
+    feedback_count: feedback_count || 0,
     by_type: byType,
     tag_counts: tagCounts,
   })

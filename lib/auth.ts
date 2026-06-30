@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { execute, queryOne } from './db'
+import { getSupabase } from './db'
 
 const SESSION_COOKIE = 'session_token'
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000
@@ -16,29 +16,33 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createSession(): Promise<string> {
+  const supabase = getSupabase()
   const token = uuidv4()
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE).toISOString()
-  await execute('INSERT INTO sessions (token, expires_at) VALUES ($1, $2)', [token, expiresAt])
+  await supabase.from('sessions').insert({ token, expires_at: expiresAt })
   return token
 }
 
 export async function validateSession(token: string): Promise<boolean> {
-  const row = await queryOne('SELECT expires_at FROM sessions WHERE token = $1', [token]) as { expires_at: string } | undefined
-  if (!row) return false
-  const expiresAt = new Date(row.expires_at)
+  const supabase = getSupabase()
+  const { data } = await supabase.from('sessions').select('expires_at').eq('token', token).maybeSingle()
+  if (!data) return false
+  const expiresAt = new Date(data.expires_at)
   if (expiresAt < new Date()) {
-    await execute('DELETE FROM sessions WHERE token = $1', [token])
+    await supabase.from('sessions').delete().eq('token', token)
     return false
   }
   return true
 }
 
 export async function deleteSession(token: string) {
-  await execute('DELETE FROM sessions WHERE token = $1', [token])
+  const supabase = getSupabase()
+  await supabase.from('sessions').delete().eq('token', token)
 }
 
 export async function cleanExpiredSessions() {
-  await execute("DELETE FROM sessions WHERE expires_at < NOW()")
+  const supabase = getSupabase()
+  await supabase.from('sessions').delete().lt('expires_at', new Date().toISOString())
 }
 
 export function getSessionToken(): string | null {
