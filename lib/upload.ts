@@ -2,7 +2,9 @@ import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs'
 import path from 'path'
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
+const UPLOAD_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(process.cwd(), 'public', 'uploads')
 
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true })
@@ -72,7 +74,7 @@ export function deleteFile(storedName: string): boolean {
 }
 
 export function getFileUrl(storedName: string): string {
-  return `/uploads/${storedName}`
+  return `/api/uploads/${storedName}`
 }
 
 export function getFileMimeCategory(mimeType: string): string {
