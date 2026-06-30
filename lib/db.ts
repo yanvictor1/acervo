@@ -2,7 +2,9 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'data')
+  : path.join(process.cwd(), 'data')
 const DB_PATH = path.join(DATA_DIR, 'app.db')
 
 let db: Database.Database | null = null
@@ -13,7 +15,7 @@ export function getDb(): Database.Database {
 
     const needsInit = !fs.existsSync(DB_PATH)
     db = new Database(DB_PATH)
-    db.pragma('journal_mode = WAL')
+    if (!process.env.VERCEL) db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
 
     if (needsInit) {

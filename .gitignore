@@ -12,3 +12,6 @@ server.err
 1780844214024-prompt-master/
 1780947367504-frontend-design/
 visual-explainer/
+
+.vercel
+.env*
