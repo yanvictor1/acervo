@@ -5,9 +5,10 @@ import { Upload, X, FileText, Image, File } from 'lucide-react'
 
 interface UploadDropzoneProps {
   onUpload: (file: File, metadata: { title: string; description: string; tags: string[] }) => void
+  uploading?: boolean
 }
 
-export default function UploadDropzone({ onUpload }: UploadDropzoneProps) {
+export default function UploadDropzone({ onUpload, uploading }: UploadDropzoneProps) {
   const [dragOver, setDragOver] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
@@ -16,16 +17,24 @@ export default function UploadDropzone({ onUpload }: UploadDropzoneProps) {
   const [tags, setTags] = useState<string[]>([])
   const [step, setStep] = useState<'select' | 'metadata'>('select')
 
+  const MAX_SIZE = 50 * 1024 * 1024
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
     const f = e.dataTransfer.files[0]
-    if (f) { setFile(f); setStep('metadata'); setTitle(f.name.replace(/\.[^/.]+$/, '')) }
+    if (f) {
+      if (f.size > MAX_SIZE) { alert('Arquivo muito grande. Máximo 50MB.'); return }
+      setFile(f); setStep('metadata'); setTitle(f.name.replace(/\.[^/.]+$/, ''))
+    }
   }, [])
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
-    if (f) { setFile(f); setStep('metadata'); setTitle(f.name.replace(/\.[^/.]+$/, '')) }
+    if (f) {
+      if (f.size > MAX_SIZE) { alert('Arquivo muito grande. Máximo 50MB.'); return }
+      setFile(f); setStep('metadata'); setTitle(f.name.replace(/\.[^/.]+$/, ''))
+    }
   }
 
   function addTag() {
@@ -33,9 +42,8 @@ export default function UploadDropzone({ onUpload }: UploadDropzoneProps) {
     if (t && !tags.includes(t)) { setTags([...tags, t]); setTagInput('') }
   }
 
-  function submit() {
-    if (file) onUpload(file, { title: title || file.name, description, tags })
-    reset()
+  async function submit() {
+    if (file) { await onUpload(file, { title: title || file.name, description, tags }); reset() }
   }
 
   function reset() {
@@ -133,8 +141,10 @@ export default function UploadDropzone({ onUpload }: UploadDropzoneProps) {
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-ink-800/50">
-            <button onClick={reset} className="btn-ghost flex-1 border border-ink-700/30">Cancelar</button>
-            <button onClick={submit} className="btn-primary flex-1">Fazer upload</button>
+            <button onClick={reset} disabled={uploading} className="btn-ghost flex-1 border border-ink-700/30 disabled:opacity-40">Cancelar</button>
+            <button onClick={submit} disabled={uploading} className="btn-primary flex-1 disabled:opacity-50">
+              {uploading ? 'Enviando...' : 'Fazer upload'}
+            </button>
           </div>
         </div>
       ) : null}

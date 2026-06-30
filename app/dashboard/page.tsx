@@ -20,6 +20,8 @@ export default function DashboardPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showUpload, setShowUpload] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [stats, setStats] = useState<any>(null)
   const [feedback, setFeedback] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
@@ -55,14 +57,26 @@ export default function DashboardPage() {
   useEffect(() => { fetchDocs(); fetchFavorites(); fetchTags(); fetchStats() }, [fetchDocs, fetchFavorites, fetchTags, fetchStats])
 
   async function handleUpload(file: File, metadata: { title: string; description: string; tags: string[] }) {
+    setUploading(true)
+    setUploadError('')
     const form = new FormData()
     form.append('file', file)
     form.append('title', metadata.title)
     form.append('description', metadata.description)
     form.append('tags', JSON.stringify(metadata.tags))
 
-    const res = await fetch('/api/documents', { method: 'POST', body: form })
-    if (res.ok) { fetchDocs(); fetchTags(); fetchStats(); setShowUpload(false) }
+    try {
+      const res = await fetch('/api/documents', { method: 'POST', body: form })
+      if (res.ok) { fetchDocs(); fetchTags(); fetchStats(); setShowUpload(false) }
+      else {
+        const err = await res.json().catch(() => ({ error: 'Erro ao fazer upload' }))
+        setUploadError(err.error || `Erro ${res.status}`)
+      }
+    } catch {
+      setUploadError('Erro de conexão. Verifique o arquivo e tente novamente.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function toggleFavorite(id: number) {
@@ -127,7 +141,12 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {showUpload && (
           <div className="animate-slide-up">
-            <UploadDropzone onUpload={handleUpload} />
+            {uploadError && (
+              <div className="mb-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+                {uploadError}
+              </div>
+            )}
+            <UploadDropzone onUpload={handleUpload} uploading={uploading} />
           </div>
         )}
 
