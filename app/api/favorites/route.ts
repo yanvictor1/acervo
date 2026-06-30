@@ -13,5 +13,5 @@ export async function GET() {
     .select('document_id')
     .eq('user_id', userId)
 
-  return NextResponse.json((data || []).map((r) => r.document_id))
+  return NextResponse.json((data || []).map((r: any) => r.document_id))
 }

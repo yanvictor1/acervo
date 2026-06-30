@@ -10,7 +10,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const supabase = getSupabase()
-  const { data: doc } = await supabase.from('documents').select('*').eq('id', params.id).maybeSingle()
+  const docRes = await supabase.from('documents').select('*').eq('id', params.id).maybeSingle()
+  const doc: any = docRes.data
 
   if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
@@ -28,7 +29,8 @@ export async function PATCH(
 
   try {
     const supabase = getSupabase()
-    const { data: doc } = await supabase.from('documents').select('*').eq('id', params.id).maybeSingle()
+    const getRes = await supabase.from('documents').select('*').eq('id', params.id).maybeSingle()
+    const doc: any = getRes.data
     if (!doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
@@ -45,10 +47,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
-    const { data } = await supabase.from('documents').update(updates).eq('id', params.id).select()
-    if (!data || !data[0]) throw new Error('Update failed')
+    const updRes = await supabase.from('documents').update(updates).eq('id', params.id).select()
+    const updated: any = updRes.data?.[0]
+    if (!updated) throw new Error('Update failed')
 
-    return NextResponse.json({ ...data[0], tags: JSON.parse(data[0].tags || '[]') })
+    return NextResponse.json({ ...updated, tags: JSON.parse(updated.tags || '[]') })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
@@ -62,7 +65,8 @@ export async function DELETE(
   if (auth?.error) return auth.error
 
   const supabase = getSupabase()
-  const { data: doc } = await supabase.from('documents').select('stored_name').eq('id', params.id).maybeSingle()
+  const delRes = await supabase.from('documents').select('stored_name').eq('id', params.id).maybeSingle()
+  const doc: any = delRes.data
 
   if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })

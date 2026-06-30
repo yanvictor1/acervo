@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
 
     if (action === 'delete') {
       for (const id of ids) {
-        const { data: doc } = await supabase.from('documents').select('stored_name').eq('id', id).maybeSingle()
+        const delRes = await supabase.from('documents').select('stored_name').eq('id', id).maybeSingle()
+        const doc: any = delRes.data
         if (doc) deleteFile(doc.stored_name)
       }
       await supabase.from('documents').delete().in('id', ids)
@@ -29,22 +30,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'add_tag' && tag) {
-      const { data: docs } = await supabase.from('documents').select('id, tags').in('id', ids)
-      for (const doc of docs || []) {
+      const addRes = await supabase.from('documents').select('id, tags').in('id', ids)
+      const addDocs: any[] = addRes.data || []
+      for (const doc of addDocs) {
         const tags = new Set(JSON.parse(doc.tags || '[]'))
         tags.add(tag)
         await supabase.from('documents').update({ tags: JSON.stringify([...tags]) }).eq('id', doc.id)
       }
-      return NextResponse.json({ success: true, updated: docs?.length || 0 })
+      return NextResponse.json({ success: true, updated: addDocs.length })
     }
 
     if (action === 'remove_tag' && tag) {
-      const { data: docs } = await supabase.from('documents').select('id, tags').in('id', ids)
-      for (const doc of docs || []) {
+      const remRes = await supabase.from('documents').select('id, tags').in('id', ids)
+      const remDocs: any[] = remRes.data || []
+      for (const doc of remDocs) {
         const tags = (JSON.parse(doc.tags || '[]') as string[]).filter((t: string) => t !== tag)
         await supabase.from('documents').update({ tags: JSON.stringify(tags) }).eq('id', doc.id)
       }
-      return NextResponse.json({ success: true, updated: docs?.length || 0 })
+      return NextResponse.json({ success: true, updated: remDocs.length })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

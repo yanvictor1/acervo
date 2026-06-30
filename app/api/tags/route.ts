@@ -8,9 +8,10 @@ export async function GET() {
   const { data } = await supabase.from('documents').select('tags')
 
   const tagSet = new Set<string>()
-  for (const doc of data || []) {
+  const docs: any[] = data || []
+  for (const doc of docs) {
     try {
-      const tags = JSON.parse(doc.tags || '[]')
+      const tags: string[] = JSON.parse(doc.tags || '[]')
       for (const tag of tags) tagSet.add(tag)
     } catch {}
   }
