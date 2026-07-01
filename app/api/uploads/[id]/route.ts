@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-const UPLOAD_DIR = process.env.VERCEL
+const UPLOAD_DIR = process.env.VERCEL || process.env.NETLIFY
   ? path.join('/tmp', 'uploads')
   : path.join(process.cwd(), 'public', 'uploads')
 
