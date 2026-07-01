@@ -20,7 +20,7 @@ interface PreviewModalProps {
 }
 
 export default function PreviewModal({ doc, onClose }: PreviewModalProps) {
-  const fileUrl = doc.file_url || `/uploads/${doc.stored_name}`
+  const fileUrl = doc.file_url || ''
   const isHtml = doc.mime_type === 'text/html' || doc.filename.endsWith('.html')
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

@@ -97,10 +97,6 @@ export async function deleteFile(storedName: string): Promise<boolean> {
 }
 
 export function getFileUrl(storedName: string): string {
-  if (USE_SUPABASE) {
-    const baseUrl = process.env.SUPABASE_URL!.replace(/\/$/, '')
-    return `${baseUrl}/storage/v1/object/public/acervo-files/${storedName}`
-  }
   return `/api/uploads/${storedName}`
 }
 
